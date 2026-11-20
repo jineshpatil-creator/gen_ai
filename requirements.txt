@@ -1,0 +1,8 @@
+# Pinned to match logistic_regression_model.pkl (saved with scikit-learn 1.6.1 / NumPy 2.x).
+# pandas is required because the pipeline's ColumnTransformer selects columns by name.
+Flask==3.1.1
+gunicorn==23.0.0
+scikit-learn==1.6.1
+numpy==2.2.6
+scipy==1.15.3
+pandas==2.2.3
