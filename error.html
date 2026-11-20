@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} — InsightAI</title>
+  <link rel="icon" href="{{ asset('img/favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Manrope:wght@700;800&display=swap">
+  <link rel="stylesheet" href="{{ asset('css/styles.css') }}">
+</head>
+<body class="errorpage">
+  <main class="errorbox card">
+    <p class="errorbox__code">{{ code }}</p>
+    <h1>{{ title }}</h1>
+    <p>{{ message }}</p>
+    <a class="btn btn--primary" href="/"><span class="btn__label">Back to InsightAI</span></a>
+  </main>
+</body>
+</html>

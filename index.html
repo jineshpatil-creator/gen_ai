@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>InsightAI — Student Impact Intelligence</title>
+  <meta name="description" content="Estimate a student's burnout-risk level from 14 academic and GenAI-usage signals, with class probabilities and the inputs that drove the result.">
+  <meta name="theme-color" content="#0A1230">
+  <link rel="icon" href="{{ asset('img/favicon.svg') }}" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Manrope:wght@600;700;800&display=swap">
+  <link rel="stylesheet" href="{{ asset('css/styles.css') }}">
+</head>
+<body>
+<a class="skip" href="#predict-form">Skip to the form</a>
+
+{# ---------- Reusable field macro ---------- #}
+{% macro field(f) %}
+  {% set fid = 'f-' ~ f.name %}
+  {% set wide = f.widget == 'scale' or (f.widget == 'segmented' and f.options|length > 2) %}
+  <div class="field{% if wide %} field--wide{% endif %}" data-field="{{ f.name }}">
+    {% if f.widget == 'select' %}
+      <label class="field__label" for="{{ fid }}">{{ f.label }}</label>
+      <div class="control control--select">
+        <select id="{{ fid }}" name="{{ f.name }}" required aria-describedby="help-{{ f.name }} err-{{ f.name }}">
+          <option value="" selected disabled>Select an option</option>
+          {% for o in f.options %}<option value="{{ o.value }}">{{ o.label }}</option>{% endfor %}
+        </select>
+      </div>
+    {% elif f.widget == 'number' %}
+      <label class="field__label" for="{{ fid }}">{{ f.label }}</label>
+      <div class="control control--number">
+        <input id="{{ fid }}" name="{{ f.name }}" type="number" inputmode="{{ 'numeric' if f.integer else 'decimal' }}"
+               min="{{ f.min }}" max="{{ f.max }}" step="{{ f.step }}" placeholder="0" required
+               aria-describedby="help-{{ f.name }} err-{{ f.name }}">
+        {% if f.unit %}<span class="control__unit" aria-hidden="true">{{ f.unit }}</span>{% endif %}
+      </div>
+    {% elif f.widget == 'segmented' %}
+      <fieldset aria-describedby="help-{{ f.name }} err-{{ f.name }}">
+        <legend class="field__label">{{ f.label }}</legend>
+        <div class="seg seg--{{ f.options|length }}">
+          {% for o in f.options %}
+            <label class="seg__item">
+              <input type="radio" name="{{ f.name }}" value="{{ o.value }}" required>
+              <span>{{ o.label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+    {% elif f.widget == 'scale' %}
+      <fieldset aria-describedby="help-{{ f.name }} err-{{ f.name }}">
+        <legend class="field__label">{{ f.label }}</legend>
+        <div class="scale">
+          {% for n in range(f.min|int, f.max|int + 1) %}
+            <label class="scale__item">
+              <input type="radio" name="{{ f.name }}" value="{{ n }}" required>
+              <span>{{ n }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+    {% endif %}
+    <p class="field__help" id="help-{{ f.name }}">{{ f.help }}</p>
+    <p class="field__error" id="err-{{ f.name }}" hidden></p>
+  </div>
+{% endmacro %}
+
+{# ---------- Hero ---------- #}
+<header class="hero">
+  <div class="hero__glow hero__glow--blue" aria-hidden="true"></div>
+  <div class="hero__glow hero__glow--cyan" aria-hidden="true"></div>
+  <div class="wrap">
+    <nav class="topbar" aria-label="Product">
+      <a class="brand" href="/" aria-label="InsightAI home">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="22" height="22" fill="none"><circle cx="16" cy="16" r="10" stroke="#fff" stroke-opacity=".35" stroke-width="3"/><path d="M16 6a10 10 0 0 1 9.5 6.9" stroke="#fff" stroke-width="3" stroke-linecap="round"/><circle cx="16" cy="16" r="3" fill="#fff"/></svg>
+        </span>
+        <span class="brand__name">InsightAI</span>
+      </a>
+      <span class="status {{ 'status--ok' if facts.loaded else 'status--down' }}" role="status">
+        <span class="status__dot" aria-hidden="true"></span>
+        {{ 'Model online' if facts.loaded else 'Model unavailable' }}
+      </span>
+    </nav>
+
+    <div class="hero__body">
+      <div class="hero__copy">
+        <h1 class="reveal d-0">Student Impact Intelligence</h1>
+        <p class="hero__lede reveal d-1">Estimate a student's burnout-risk level from 14 academic and GenAI-usage signals, see how likely each class is, and which inputs moved the result.</p>
+      </div>
+
+      {% if facts.loaded %}
+      <div class="floaters" aria-label="Model facts">
+        <div class="floater floater--a reveal d-2">
+          <span class="floater__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 3 8-9"/><path d="M14 5h6v6"/></svg></span>
+          <div><strong>{{ facts.algorithm }}</strong><span>scikit-learn {{ facts.sklearn }} pipeline</span></div>
+        </div>
+        <div class="floater floater--b reveal d-3">
+          <span class="floater__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg></span>
+          <div><strong>{{ facts.n_features }} input features</strong><span>{{ facts.n_numeric }} numeric, {{ facts.n_categorical }} categorical</span></div>
+        </div>
+        <div class="floater floater--c reveal d-4">
+          <span class="floater__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg></span>
+          <div><strong>{{ facts.classes|length }} risk classes</strong><span>{{ facts.classes|join(', ') }}</span></div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</header>
+
+<main class="wrap main" id="main">
+{% if not facts.loaded %}
+  <section class="card notice" role="alert">
+    <h2>The prediction model isn't available</h2>
+    <p>{{ model_error }}</p>
+    <p class="muted">Check that <code>logistic_regression_model.pkl</code> sits next to <code>app.py</code> and that the installed scikit-learn version matches <code>requirements.txt</code>.</p>
+  </section>
+{% else %}
+  <div class="layout">
+    {# ---------- Form ---------- #}
+    <form class="form" id="predict-form" novalidate aria-describedby="form-banner">
+      <div class="banner" id="form-banner" role="alert" hidden></div>
+
+      {% for g in groups %}
+      <section class="card group reveal d-{{ loop.index + 1 }}" aria-labelledby="g-{{ g.id }}">
+        <header class="group__head">
+          <span class="group__icon" aria-hidden="true">
+            {% if g.id == 'profile' %}<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            {% elif g.id == 'academic' %}<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5"/></svg>
+            {% elif g.id == 'usage' %}<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.900 5.100L19 10l-5.100 1.900L12 17l-1.900-5.100L5 10l5.100-1.900z"/><path d="M19 16l.8 2.200L22 19l-2.200.8L19 22l-.8-2.200L16 19l2.200-.8z"/></svg>
+            {% else %}<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>{% endif %}
+          </span>
+          <div>
+            <h2 id="g-{{ g.id }}">{{ g.title }}</h2>
+            <p>{{ g.blurb }}</p>
+          </div>
+        </header>
+        <div class="fields">
+          {% for f in g.fields %}{{ field(f) }}{% endfor %}
+        </div>
+      </section>
+      {% endfor %}
+
+      <div class="actions reveal d-6">
+        <button class="btn btn--primary" type="submit" id="submit-btn">
+          <span class="btn__label">Predict burnout risk</span>
+          <span class="btn__spinner" aria-hidden="true"></span>
+        </button>
+        <button class="btn btn--ghost" type="button" id="fill-btn">Use a typical profile</button>
+        <button class="btn btn--text" type="reset" id="reset-btn">Reset</button>
+      </div>
+      <p class="fineprint">A typical profile uses the median and most common values the model learned from its training data.</p>
+    </form>
+
+    {# ---------- Result ---------- #}
+    <aside class="result card reveal d-3" id="result-panel" data-state="idle" aria-labelledby="result-title">
+      <div class="stage">
+        <div class="ring" id="ring">
+          <svg viewBox="0 0 200 200" aria-hidden="true">
+            <circle class="ring__track" cx="100" cy="100" r="84"/>
+            <circle class="ring__arc" id="ring-arc" cx="100" cy="100" r="84" transform="rotate(-90 100 100)"/>
+          </svg>
+          <div class="ring__center">
+            <span class="ring__value" id="ring-value">—</span>
+            <span class="ring__caption" id="ring-caption">probability</span>
+          </div>
+        </div>
+        <p class="stage__kicker" id="stage-kicker">Predicted burnout risk</p>
+        <h2 class="stage__title" id="result-title" tabindex="-1">Your prediction</h2>
+        <p class="stage__text" id="stage-text">Complete all 14 fields, then run the prediction to see the risk class and how likely each class is.</p>
+      </div>
+
+      <div class="details">
+        <section aria-labelledby="prob-title">
+          <h3 id="prob-title">Class probabilities</h3>
+          <ul class="probs" id="prob-list"></ul>
+        </section>
+        <section aria-labelledby="drv-title">
+          <h3 id="drv-title">What shaped this result</h3>
+          <p class="details__note" id="drv-note"></p>
+          <ul class="drivers" id="driver-list"></ul>
+        </section>
+        <p class="disclaimer">A statistical estimate from a logistic regression model trained on past data. It is not a clinical assessment or a diagnosis.</p>
+      </div>
+      <p class="sr-only" id="live" aria-live="polite"></p>
+    </aside>
+  </div>
+{% endif %}
+</main>
+
+<footer class="footer">
+  <div class="wrap footer__row">
+    <span>InsightAI · Student Impact Intelligence</span>
+    <span>Flask · scikit-learn · NumPy</span>
+  </div>
+</footer>
+
+{% if facts.loaded %}
+<script type="application/json" id="app-data">{{ {"schema": schema, "typical": typical}|tojson }}</script>
+<script src="{{ asset('js/app.js') }}" defer></script>
+{% endif %}
+</body>
+</html>
